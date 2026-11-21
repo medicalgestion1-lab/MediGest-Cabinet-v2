@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediGest Cabinet v2</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f1f5f9;color:#172033}
+header{background:#087e70;color:white;padding:20px}
+header h2{margin:0}
+header p{margin:6px 0 0}
+nav{display:flex;flex-wrap:wrap;background:white;padding:8px;gap:5px}
+nav button{border:0;padding:11px;background:#e5e7eb;border-radius:7px}
+nav button.active{background:#087e70;color:white}
+main{padding:15px;max-width:850px;margin:auto}
+.card{background:white;padding:16px;border-radius:10px;margin-bottom:14px;box-shadow:0 1px 4px #ddd}
+h3{color:#087e70}
+input,select{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccc;border-radius:6px;font-size:15px}
+.action{background:#087e70;color:white;border:0;padding:12px 16px;border-radius:7px}
+.delete{background:#c0392b;color:white;border:0;padding:7px;border-radius:5px}
+.item{border-bottom:1px solid #ddd;padding:12px 0}
+.stat{font-size:25px;font-weight:bold;color:#087e70}
+small{color:#64748b}
+</style>
+</head>
+<body>
+<header>
+<h2>🏥 MediGest Cabinet</h2>
+<p>Gestion médicale et administrative v2</p>
+</header>
+
+<nav>
+<button class="active" onclick="show('home',this)">Accueil</button>
+<button onclick="show('patients',this)">Patients</button>
+<button onclick="show('stock',this)">Médicaments</button>
+<button onclick="show('acts',this)">Actes</button>
+</nav>
+
+<main>
+<section id="home">
+<div class="card">
+<h3>Tableau de bord</h3>
+<p>Patients enregistrés</p>
+<div class="stat" id="np">0</div>
+<p>Médicaments en stock</p>
+<div class="stat" id="ns">0</div>
+<p>Actes enregistrés</p>
+<div class="stat" id="na">0</div>
+</div>
+<div class="card">
+<h3>Bienvenue sur MediGest</h3>
+<p>Votre logiciel de gestion de cabinet médical.</p>
+<small>Données enregistrées sur cet appareil.</small>
+</div>
+</section>
+
+<section id="patients" hidden>
+<div class="card">
+<h3>Ajouter un patient</h3>
+<input id="pn" placeholder="Nom et prénom">
+<input id="pa" type="number" placeholder="Âge">
+<select id="ps">
+<option value="F">Féminin</option>
+<option value="M">Masculin</option>
+</select>
+<input id="pt" placeholder="Téléphone">
+<button class="action" onclick="addPatient()">Enregistrer le patient</button>
+</div>
+<div class="card">
+<h3>Liste des patients</h3>
+<div id="pl"></div>
+</div>
+</section>
+
+<section id="stock" hidden>
+<div class="card">
+<h3>Ajouter un médicament</h3>
+<input id="mn" placeholder="Nom du médicament">
+<input id="mq" type="number" placeholder="Quantité en stock">
+<input id="mp" type="number" placeholder="Prix unitaire (Ar)">
+<button class="action" onclick="addMedicine()">Enregistrer</button>
+</div>
+<div class="card">
+<h3>Inventaire</h3>
+<div id="ml"></div>
+</div>
+</section>
+
+<section id="acts" hidden>
+<div class="card">
+<h3>Enregistrer un acte médical</h3>
+<input id="an" placeholder="Nom du patient">
+<input id="aa" placeholder="Type d'acte">
+<input id="av" type="number" placeholder="Montant (Ar)">
+<button class="action" onclick="addAct()">Enregistrer l'acte</button>
+</div>
+<div class="card">
+<h3>Historique des actes</h3>
+<div id="al"></div>
+</div>
+</section>
+</main>
+
+<script>
+const get=(k)=>JSON.parse(localStorage.getItem(k)||"[]");
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+function show(id,btn){
+document.querySelectorAll("main section").forEach(s=>s.hidden=true);
+document.getElementById(id).hidden=false;
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+btn.classList.add("active");
+refresh();
+}
+
+function addPatient(){
+let n=pn.value.trim();
+if(!n)return alert("Saisir le nom du patient");
+let a=get("patients");
+a.push({id:Date.now(),n,age:pa.value,sex:ps.value,tel:pt.value});
+save("patients",a);
+pn.value=pa.value=pt.value="";
+refresh();
+alert("Patient enregistré");
+}
+
+function addMedicine(){
+let n=mn.value.trim(),q=Number(mq.value),p=Number(mp.value);
+if(!n||mq.value===""||q<0||mp.value===""||p<0)
+return alert("Vérifier les informations");
+let a=get("medicines");
+a.push({id:Date.now(),n,q,p});
+save("medicines",a);
+mn.value=mq.value=mp.value="";
+refresh();
+alert("Médicament enregistré");
+}
+
+function addAct(){
+let n=an.value.trim(),a=aa.value.trim(),v=Number(av.value);
+if(!n||!a||av.value===""||v<0)
+return alert("Remplir tous les champs");
+let list=get("acts");
+list.push({id:Date.now(),n,a,v,date:new Date().toLocaleDateString("fr-FR")});
+save("acts",list);
+an.value=aa.value=av.value="";
+refresh();
+alert("Acte enregistré");
+}
+
+function removeItem(key,id){
+if(!confirm("Supprimer cet élément ?"))return;
+save(key,get(key).filter(x=>x.id!==id));
+refresh();
+}
+
+function refresh(){
+let p=get("patients"),m=get("medicines"),a=get("acts");
+np.textContent=p.length;
+ns.textContent=m.length;
+na.textContent=a.length;
+
+pl.innerHTML=p.map(x=>`
+<div class="item"><b>${esc(x.n)}</b><br>
+${esc(x.age||"Âge non renseigné")} ans · ${esc(x.sex)}<br>
+<small>${esc(x.tel||"Sans téléphone")}</small><br>
+<button class="delete" onclick="removeItem('patients',${x.id})">Supprimer</button></div>`).join("")||"Aucun patient enregistré";
+
+ml.innerHTML=m.map(x=>`
+<div class="item"><b>${esc(x.n)}</b><br>
+Stock : ${x.q} · Prix : ${x.p.toLocaleString("fr-FR")} Ar<br>
+<button class="delete" onclick="removeItem('medicines',${x.id})">Supprimer</button></div>`).join("")||"Aucun médicament";
+
+al.innerHTML=a.map(x=>`
+<div class="item"><b>${esc(x.n)}</b><br>
+${esc(x.a)} · ${x.v.toLocaleString("fr-FR")} Ar<br>
+<small>${x.date}</small><br>
+<button class="delete" onclick="removeItem('acts',${x.id})">Supprimer</button></div>`).join("")||"Aucun acte enregistré";
+}
+
+function esc(s){
+return String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+refresh();
+</script>
+</body>
+</html>
